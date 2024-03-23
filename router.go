@@ -57,11 +57,7 @@ func registerHandlers(router *gin.Engine) {
 	router.GET("/logout", logout)
 	// Home
 	router.GET("/", indexPage)
-	router.GET("/items", items)
-	router.POST("/items/create", createItem)
-	router.GET("/items/edit/:id", editItem)
-	router.POST("/items/update/:id", updateItem)
-	router.DELETE("/items/delete/:id", deleteItem)
+	router.GET("/user", userInfo)
 	// Health check
 	router.GET("/ping", ping)
 }

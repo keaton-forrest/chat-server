@@ -6,38 +6,25 @@
         <link rel="stylesheet" href="/static/css/style.css" />
         <script src="/static/js/htmx.js" defer></script>
         <script src="/static/js/script.js" defer></script>
-        <title>ToeDoe</title>
+        <title>Chatty</title>
     </head>
     <body>
         <div id="view-frame">
-            <div id="toedoe-frame">
-                <div class="toedoe-heading">ToeDoe List</div>
-                <form
-                    class="controls"
-                    hx-post="/items/create"
-                    hx-target="#items"
-                    hx-swap="innerHTML"
-                    hx-indicator="#loading"
-                >
-                    <div class="form-control form-item">
-                        <input type="text" name="item" required />
+            <div id="chat-frame">
+                <div id="top-bar">
+                    <div id="user-info" hx-get="/user" hx-trigger="load" hx-swap="innerHTML"></div>
+                    <div id="user-logout">
+                        <button hx-get="/logout" hx-trigger="click">Logout</button>
                     </div>
-                    <div class="form-control form-duedate">
-                        <input type="date" name="date" required />
-                    </div>
-                    <div class="form-control form-create">
-                        <button class="control-create" type="submit">+</button>
-                    </div>
-                </form>
-                <ul hx-get="/items" id="items" hx-trigger="load" hx-indicator="#loading">
-                    <!-- Items here are lazy loaded -->
-                </ul>
-                <div id="loading" class="htmx-indicator overlay">
-                    <div>Loading...</div>
                 </div>
-                <div id="connection-error" class="htmx-indicator overlay">
-                    <div>Connection lost...</div>
-                </div>
+                <!-- Rooms are HTML Tabs, lazy loaded -->
+                <div id="rooms" class="tabs" hx-get="/rooms" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#loading"></div>
+            </div>
+            <div id="loading" class="htmx-indicator overlay">
+                <div>Loading...</div>
+            </div>
+            <div id="connection-error" class="htmx-indicator overlay">
+                <div>Connection lost...</div>
             </div>
         </div>
     </body>

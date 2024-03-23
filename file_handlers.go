@@ -1,37 +1,36 @@
-// file_handlers.go
-
 package main
 
 import (
 	"encoding/json"
 	"log"
 	"os"
+
+	"github.com/google/uuid"
 )
 
 /* File Handlers */
 
-// LoadItems loads the items from the JSON file associated with the specified list UUID
-func LoadItems(listID string) (Items, error) {
-	var items Items
-	filename := listID + ".json" // Construct the filename using the list UUID
+// LoadRoom loads a room from the JSON file associated with the room ID
+func LoadRoom(roomID string) (Room, error) {
+	var room Room
+	filename := roomID + ".json" // Construct the filename using the room ID
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		log.Println(err)
-		return items, err
+		return room, err
 	}
-	err = json.Unmarshal(data, &items)
-	return items, err
+	err = json.Unmarshal(data, &room)
+	return room, err
 }
 
-// SaveItems saves the items to the JSON file associated with the specified list UUID
-func SaveItems(listID string, items Items) error {
-	filename := listID + ".json" // Construct the filename using the list UUID
-	data, err := json.MarshalIndent(items, "", "    ")
+// SaveRoom saves a room to the JSON file associated with the room ID
+func SaveRoom(room Room) error {
+	filename := room.ID.String() + ".json" // Use room.ID.String() for filename
+	data, err := json.MarshalIndent(room, "", "  ")
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	// Write the data to the file named {listID}.json inside the current directory with 0644 permissions
 	return os.WriteFile(filename, data, 0644)
 }
 
@@ -48,18 +47,17 @@ func LoadUsers() (Users, error) {
 }
 
 func SaveUsers(users Users) error {
-	data, err := json.MarshalIndent(users, "", "    ")
+	data, err := json.MarshalIndent(users, "", "  ")
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	// Write the data to the file named users.json inside the current directory with 0644 permissions
 	return os.WriteFile("users.json", data, 0644)
 }
 
-// Create a new list file with the specified list UUID if it doesn't exist
-func CreateListFileIfNotExist(listID string) error {
-	filename := listID + ".json"
+// CreateRoomFileIfNotExist creates a new room file with the specified room ID if it doesn't exist
+func CreateRoomFileIfNotExist(roomID uuid.UUID) error {
+	filename := roomID.String() + ".json" // Use roomID.String() for filename
 
 	// Write {} to the file to represent an empty json file
 	err := os.WriteFile(filename, []byte("{}"), 0644)

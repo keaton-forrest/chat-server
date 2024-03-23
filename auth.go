@@ -8,14 +8,14 @@ import (
 
 /* Authentication Functions */
 
-// HashPassword hashes the password using bcrypt
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+// Hash a string using bcrypt
+func hashString(str string) (string, error) {
+	bytes, err := bcrypt.GenerateFromPassword([]byte(str), 14)
 	return string(bytes), err
 }
 
-// CheckPasswordHash checks the password against the hash
-func checkPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+// Compare a password to a hash
+func compareToHash(str, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(str))
 	return err == nil
 }

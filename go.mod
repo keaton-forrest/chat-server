@@ -1,4 +1,4 @@
-module simple-web-server
+module chat-app
 
 go 1.22.0
 
