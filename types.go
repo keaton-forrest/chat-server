@@ -30,13 +30,15 @@ type Message struct {
 }
 
 type Room struct {
-	Name       string      `json:"name"`
-	ID         uuid.UUID   `json:"id"`
-	Messages   []Message   `json:"messages"`
-	Mods       []uuid.UUID `json:"mods"`
-	Users      []uuid.UUID `json:"users"`
-	CreatedAt  string      `json:"created_at"`
-	ModifiedAt string      `json:"modified_at"`
+	Name       string     `json:"name"`
+	ID         uuid.UUID  `json:"id"`
+	Messages   []Message  `json:"messages"`
+	Mods       []UserStub `json:"mods"`
+	Users      []UserStub `json:"users"`
+	Banned     []UserStub `json:"banned"`
+	Muted      []UserStub `json:"muted"`
+	CreatedAt  string     `json:"created_at"`
+	ModifiedAt string     `json:"modified_at"`
 }
 
 type User struct {
@@ -44,13 +46,18 @@ type User struct {
 	DisplayName string      `json:"displayname"`
 	Email       string      `json:"email"`
 	Hash        string      `json:"hash"`
-	Rooms       []uuid.UUID `json:"rooms"`
+	Rooms       []*RoomStub `json:"rooms"`
 	CreatedAt   string      `json:"created_at"`
 	ModifiedAt  string      `json:"modified_at"`
 }
 
 type Users struct {
 	Users []User `json:"users"`
+}
+
+type UserStub struct {
+	ID          uuid.UUID `json:"id"`
+	DisplayName string    `json:"displayname"`
 }
 
 type RoomStub struct {
@@ -70,21 +77,21 @@ func NewMessage(author *User, content string) *Message {
 		ID:         uuid.New(),
 		Author:     author,
 		Content:    content,
-		CreatedAt:  currentTime(),
-		ModifiedAt: currentTime(),
+		CreatedAt:  CurrentTime(),
+		ModifiedAt: CurrentTime(),
 		Status:     StatusNew,
 	}
 }
 
 // UpdateModifiedAt updates the ModifiedAt timestamp of the Message.
 func (m *Message) UpdateModifiedAt() {
-	m.ModifiedAt = currentTime()
+	m.ModifiedAt = CurrentTime()
 	m.Status = StatusEdited
 }
 
 // Delete marks the Message as deleted.
 func (m *Message) Delete() {
-	m.ModifiedAt = currentTime()
+	m.ModifiedAt = CurrentTime()
 	m.Status = StatusDeleted
 }
 
@@ -96,10 +103,12 @@ func NewRoom(name string) *Room {
 		Name:       name,
 		ID:         uuid.New(),
 		Messages:   []Message{},
-		Mods:       []uuid.UUID{},
-		Users:      []uuid.UUID{},
-		CreatedAt:  currentTime(),
-		ModifiedAt: currentTime(),
+		Mods:       []UserStub{},
+		Users:      []UserStub{},
+		Banned:     []UserStub{},
+		Muted:      []UserStub{},
+		CreatedAt:  CurrentTime(),
+		ModifiedAt: CurrentTime(),
 	}
 	roomStub := RoomStub{
 		ID:   room.ID,
@@ -113,7 +122,7 @@ func NewRoom(name string) *Room {
 
 // UpdateModifiedAt updates the ModifiedAt timestamp of the Room.
 func (r *Room) UpdateModifiedAt() {
-	r.ModifiedAt = currentTime()
+	r.ModifiedAt = CurrentTime()
 }
 
 /* Methods for User */
@@ -126,9 +135,13 @@ func NewUser(displayName, email, hash string) *User {
 		Email:       email,
 		Hash:        hash,
 		// Add the default room ID for General Chat
-		Rooms:      []uuid.UUID{uuid.MustParse("260ca734-06ff-4baa-baaf-8e440730e960")},
-		CreatedAt:  currentTime(),
-		ModifiedAt: currentTime(),
+		// {
+		//     "id": "260ca734-06ff-4baa-baaf-8e440730e960",
+		//     "name": "General Chat"
+		// }
+		Rooms:      []*RoomStub{GetRoomStubByID("260ca734-06ff-4baa-baaf-8e440730e960")},
+		CreatedAt:  CurrentTime(),
+		ModifiedAt: CurrentTime(),
 	}
 	cache.Users.Users = append(cache.Users.Users, user)
 	// Save the users to file
@@ -138,5 +151,5 @@ func NewUser(displayName, email, hash string) *User {
 
 // UpdateModifiedAt updates the ModifiedAt timestamp of the User.
 func (u *User) UpdateModifiedAt() {
-	u.ModifiedAt = currentTime()
+	u.ModifiedAt = CurrentTime()
 }

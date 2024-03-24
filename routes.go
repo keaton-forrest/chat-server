@@ -141,7 +141,7 @@ func userInfo(context *gin.Context) {
 		return
 	}
 
-	user := getUserByID(session.Get("user").(string))
+	user := GetUserByID(session.Get("user").(string))
 	if user == nil {
 		context.Status(http.StatusNotFound)
 		return
@@ -169,7 +169,7 @@ func rooms(context *gin.Context) {
 	}
 
 	// Get the user
-	user := getUserByID(session.Get("user").(string))
+	user := GetUserByID(session.Get("user").(string))
 	if user == nil {
 		context.Status(http.StatusNotFound)
 		return
@@ -177,8 +177,8 @@ func rooms(context *gin.Context) {
 
 	// Iterate over the user's rooms ids and load the rooms, generate the rooms templates, and send the response
 	rooms := []*Room{}
-	for _, roomID := range user.Rooms {
-		room, err := LoadRoom(roomID.String())
+	for _, roomstub := range user.Rooms {
+		room, err := LoadRoom(roomstub.ID.String())
 		if err != nil {
 			// Log the error
 			log.Println(err)
@@ -212,7 +212,7 @@ func sendMessage(context *gin.Context) {
 	}
 
 	// Get the user
-	user := getUserByID(session.Get("user").(string))
+	user := GetUserByID(session.Get("user").(string))
 	if user == nil {
 		context.Status(http.StatusNotFound)
 		return
@@ -228,7 +228,7 @@ func sendMessage(context *gin.Context) {
 	// Load the room
 	room, err := LoadRoom(roomID)
 	if err != nil {
-		context.Status(http.StatusInternalServerError)
+		context.Status(http.StatusNotFound)
 		return
 	}
 
@@ -247,6 +247,8 @@ func sendMessage(context *gin.Context) {
 
 	// Save the room back to the data store
 	if err := SaveRoom(room); err != nil {
+		// Log the error
+		log.Println(err)
 		context.Status(http.StatusInternalServerError)
 		return
 	}

@@ -40,9 +40,8 @@ func init() {
 			{{end}}
 		</div>
 		<div class='users'>
-			{{range .Users}}
-				{{template "user" .}}
-			{{end}}
+			{{template "users" .Mods}}
+			{{template "users" .Users}}
 		</div>
 	</div>
 	{{template "input"}}
