@@ -14,7 +14,7 @@ function init() {
         
         polling = true;
 
-        console.log(x); // What does this event look like?
+        console.log(x);
 
         // Adding this class will make the modal visible and prevent the user from interacting with the page
         modal.classList.add('htmx-request');
@@ -32,6 +32,13 @@ function init() {
                 .catch(err => console.error(err));
         }, 1000);
     });
+
+    document.addEventListener('htmx:sseMessage', function() {
+        const messages = document.getElementsByClassName('messages')[0];
+        // scroll to the bottom
+        messages.scrollTop = messages.scrollHeight;
+    });
+
 }
 
 init();

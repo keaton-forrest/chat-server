@@ -28,7 +28,13 @@ func init() {
 <div class='room' id='id-{{.ID}}'>
 	<h2>{{.Name}}</h2>
 	<div class='col-2'>
-		<div class='messages' hx-ext="sse" sse-connect='/room/{{.ID}}/stream' sse-swap='message' hx-swap='beforeend'>
+		<div 
+			class='messages' 
+			hx-ext="sse" 
+			sse-connect='/room/{{.ID}}/stream' 
+			sse-swap='message' 
+			hx-swap='beforeend' 
+		>
 			{{range .Messages}}
 				{{template "message" .}}
 			{{end}}

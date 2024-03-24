@@ -160,6 +160,10 @@ input {
     padding: 10px 0 10px 0;
 }
 
+#rooms .room>h2 {
+    margin: 0;
+}
+
 #rooms .room .input {
     width: 100%;
 }
@@ -188,7 +192,7 @@ input {
 
 #rooms .room .messages {
     width: 80%;
-    height: 70vh;
+    height: 60vh;
     overflow-y: scroll;
     margin-bottom: 10px;
     scrollbar-width: thin;
@@ -210,13 +214,15 @@ input {
     font-weight: bold;
 }
 
-#rooms .room .messages .message .meta {
-    display: none;
+#rooms .room .messages .message .content {
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
 }
 
 #rooms .room .users {
     width: 20%;
-    height: 70vh;
+    height: 60vh;
     overflow-y: scroll;
     margin-bottom: 10px;
     scrollbar-width: thin;
@@ -289,6 +295,9 @@ button.control-delete:hover {
     #chat-frame {
         width: 100%;
     }
+    #chat-frame .message .timestamp {
+        display: none;
+    }
 }
 
 /* For medium screens: */
@@ -297,5 +306,8 @@ button.control-delete:hover {
     #login-frame,
     #chat-frame {
         width: 80%;
+    }
+    #chat-frame .message .timestamp {
+        display: none;
     }
 }
