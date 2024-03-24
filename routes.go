@@ -193,13 +193,6 @@ func sendMessage(context *gin.Context) {
 		return
 	}
 
-	// Load the room
-	room, err := LoadRoom(roomID)
-	if err != nil {
-		context.Status(http.StatusNotFound)
-		return
-	}
-
 	// Get the message content from the form
 	content := context.PostForm("content")
 	if content == "" {
@@ -210,6 +203,28 @@ func sendMessage(context *gin.Context) {
 	// Create a new message
 	message := NewMessage(user, content)
 
+	// Generate the message template
+	messageTemplate, err := MessageTemplate(message)
+	if err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
+
+	// Get the channels for the room
+	channels := GetChannels(roomID)
+
+	// For each channel, send the message
+	for _, channel := range channels {
+		channel.Stream <- messageTemplate
+	}
+
+	// Load the room
+	room, err := LoadRoom(roomID)
+	if err != nil {
+		context.Status(http.StatusNotFound)
+		return
+	}
+
 	// Add the message to the room
 	room.Messages = append(room.Messages, *message)
 
@@ -219,21 +234,6 @@ func sendMessage(context *gin.Context) {
 		log.Println(err)
 		context.Status(http.StatusInternalServerError)
 		return
-	}
-
-	// Get the channels for the room
-	channels := GetChannels(room.ID.String())
-
-	// Generate the message template
-	messageTemplate, err := MessageTemplate(message)
-	if err != nil {
-		context.Status(http.StatusInternalServerError)
-		return
-	}
-
-	// For each channel, send the message
-	for _, channel := range channels {
-		channel.Stream <- messageTemplate
 	}
 
 	// Send a 200 OK status
