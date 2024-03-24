@@ -34,6 +34,27 @@ func SaveRoom(room Room) error {
 	return os.WriteFile(filename, data, 0644)
 }
 
+// LoadRooms loads the rooms from the JSON file
+func LoadRoomStubs() (Roomstubs, error) {
+	var roomstubs Roomstubs
+	data, err := os.ReadFile("rooms.json")
+	if err != nil {
+		log.Println(err)
+		return roomstubs, err
+	}
+	err = json.Unmarshal(data, &roomstubs)
+	return roomstubs, err
+}
+
+func SaveRoomStubs(roomstubs Roomstubs) error {
+	data, err := json.MarshalIndent(roomstubs, "", "  ")
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return os.WriteFile("rooms.json", data, 0644)
+}
+
 // LoadUsers loads the users from the JSON file
 func LoadUsers() (Users, error) {
 	var users Users

@@ -30,15 +30,8 @@ func login(context *gin.Context) {
 	// Get a session for the user
 	session := sessions.Default(context)
 
-	// Load existing users
-	users, err := LoadUsers()
-	if err != nil {
-		context.Status(http.StatusInternalServerError)
-		return
-	}
-
 	// Find the user in the users list
-	for _, user := range users.Users {
+	for _, user := range cache.Users.Users {
 		// If we match an email
 		if user.Email == email {
 			// Check the password hash
@@ -91,16 +84,8 @@ func register(context *gin.Context) {
 		return
 	}
 
-	// Load existing users
-	users, err := LoadUsers()
-	if err != nil {
-		log.Println("Error loading users")
-		context.Status(http.StatusInternalServerError)
-		return
-	}
-
 	// Check if the email is already taken
-	for _, user := range users.Users {
+	for _, user := range cache.Users.Users {
 		if user.Email == email {
 			log.Println("Email already taken")
 			context.Status(http.StatusConflict)
@@ -118,10 +103,10 @@ func register(context *gin.Context) {
 
 	// Add the new user to the users list
 	newUser := NewUser(displayName, email, hash)
-	users.Users = append(users.Users, *newUser)
+	cache.Users.Users = append(cache.Users.Users, *newUser)
 
 	// Save the updated users back to the data store
-	if err := SaveUsers(users); err != nil {
+	if err := SaveUsers(cache.Users); err != nil {
 		log.Println("Error saving users")
 		context.Status(http.StatusInternalServerError)
 		return
@@ -156,13 +141,7 @@ func userInfo(context *gin.Context) {
 		return
 	}
 
-	users, err := LoadUsers()
-	if err != nil {
-		context.Status(http.StatusInternalServerError)
-		return
-	}
-
-	user := getUserByID(users.Users, session.Get("user").(string))
+	user := getUserByID(session.Get("user").(string))
 	if user == nil {
 		context.Status(http.StatusNotFound)
 		return
@@ -189,15 +168,8 @@ func rooms(context *gin.Context) {
 		return
 	}
 
-	// Load existing users
-	users, err := LoadUsers()
-	if err != nil {
-		context.Status(http.StatusInternalServerError)
-		return
-	}
-
 	// Get the user
-	user := getUserByID(users.Users, session.Get("user").(string))
+	user := getUserByID(session.Get("user").(string))
 	if user == nil {
 		context.Status(http.StatusNotFound)
 		return
@@ -208,6 +180,8 @@ func rooms(context *gin.Context) {
 	for _, roomID := range user.Rooms {
 		room, err := LoadRoom(roomID.String())
 		if err != nil {
+			// Log the error
+			log.Println(err)
 			context.Status(http.StatusInternalServerError)
 			return
 		}
@@ -216,6 +190,8 @@ func rooms(context *gin.Context) {
 
 	roomsTemplate, err := RoomsTemplate(rooms)
 	if err != nil {
+		// Log the error
+		log.Println(err)
 		context.Status(http.StatusInternalServerError)
 		return
 	}
@@ -235,15 +211,8 @@ func sendMessage(context *gin.Context) {
 		return
 	}
 
-	// Load existing users
-	users, err := LoadUsers()
-	if err != nil {
-		context.Status(http.StatusInternalServerError)
-		return
-	}
-
 	// Get the user
-	user := getUserByID(users.Users, session.Get("user").(string))
+	user := getUserByID(session.Get("user").(string))
 	if user == nil {
 		context.Status(http.StatusNotFound)
 		return

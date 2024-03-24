@@ -62,6 +62,12 @@ func init() {
 </div>
 {{end}}
 
+{{define "users"}}
+	{{range .}}
+		{{template "user" .}}
+	{{end}}
+{{end}}
+
 {{define "user"}}
 <div class='user'>
 	<div class='displayname'>{{.DisplayName}}</div>
@@ -92,6 +98,14 @@ func RoomsTemplate(rooms []*Room) (string, error) {
 func UserTemplate(user *User) (string, error) {
 	var htmlResponse bytes.Buffer
 	if err := templates.ExecuteTemplate(&htmlResponse, "user", user); err != nil {
+		return "", err
+	}
+	return htmlResponse.String(), nil
+}
+
+func UsersTemplate(users []*User) (string, error) {
+	var htmlResponse bytes.Buffer
+	if err := templates.ExecuteTemplate(&htmlResponse, "users", users); err != nil {
 		return "", err
 	}
 	return htmlResponse.String(), nil

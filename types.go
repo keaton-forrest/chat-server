@@ -8,6 +8,11 @@ import (
 
 /* Types */
 
+type Cache struct {
+	Users Users
+	Rooms Roomstubs
+}
+
 // Message Status types
 const (
 	StatusNew     = "new"
@@ -48,6 +53,15 @@ type Users struct {
 	Users []User `json:"users"`
 }
 
+type RoomStub struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+type Roomstubs struct {
+	Rooms []RoomStub `json:"rooms"`
+}
+
 /* Methods for Message */
 
 // NewMessage creates a new Message instance with initial values.
@@ -78,12 +92,23 @@ func (m *Message) Delete() {
 
 // NewRoom creates a new Room instance with initial values.
 func NewRoom(name string) *Room {
-	return &Room{
+	room := &Room{
 		Name:       name,
 		ID:         uuid.New(),
+		Messages:   []Message{},
+		Mods:       []uuid.UUID{},
+		Users:      []uuid.UUID{},
 		CreatedAt:  currentTime(),
 		ModifiedAt: currentTime(),
 	}
+	roomStub := RoomStub{
+		ID:   room.ID,
+		Name: room.Name,
+	}
+	cache.Rooms.Rooms = append(cache.Rooms.Rooms, roomStub)
+	// Save the rooms to file
+	SaveRoomStubs(cache.Rooms)
+	return room
 }
 
 // UpdateModifiedAt updates the ModifiedAt timestamp of the Room.
@@ -95,7 +120,7 @@ func (r *Room) UpdateModifiedAt() {
 
 // NewUser creates a new User instance with initial values.
 func NewUser(displayName, email, hash string) *User {
-	return &User{
+	user := User{
 		ID:          uuid.New(),
 		DisplayName: displayName,
 		Email:       email,
@@ -105,19 +130,13 @@ func NewUser(displayName, email, hash string) *User {
 		CreatedAt:  currentTime(),
 		ModifiedAt: currentTime(),
 	}
+	cache.Users.Users = append(cache.Users.Users, user)
+	// Save the users to file
+	SaveUsers(cache.Users)
+	return &user
 }
 
 // UpdateModifiedAt updates the ModifiedAt timestamp of the User.
 func (u *User) UpdateModifiedAt() {
 	u.ModifiedAt = currentTime()
-}
-
-// GetUserByID returns a pointer to the User with the given ID.
-func getUserByID(users []User, id string) *User {
-	for _, user := range users {
-		if user.ID == uuid.MustParse(id) {
-			return &user
-		}
-	}
-	return nil
 }
