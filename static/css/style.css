@@ -2,11 +2,17 @@
 
 /* CSS Overrides */
 
-html, body {
+html,
+body {
     font-family: Arial, sans-serif;
     font-size: 14px;
     background-color: #212121;
     color: white;
+}
+
+a {
+    color: unset;
+    text-decoration: none;
 }
 
 ul {
@@ -21,7 +27,9 @@ button {
     height: 24px;
     border: none;
     border-radius: 4px;
-    background-color: grey;
+    background-color: #263238;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    color: white;
 }
 
 button:hover {
@@ -31,10 +39,10 @@ button:hover {
 input {
     padding: 0px 8px;
     outline: none;
-    background-color: #F5F5F5;
+    background-color: #f5f5f5;
     border: none;
     border-radius: 4px;
-    box-shadow: 0 1px 2px 0 rgba(0,0,0,0.3);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
     font-size: 14px;
 }
 
@@ -47,7 +55,8 @@ input {
     justify-content: center;
 }
 
-#register-frame, #login-frame {
+#register-frame,
+#login-frame {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -56,7 +65,8 @@ input {
     width: 50%;
 }
 
-#register-frame form, #login-frame form {
+#register-frame form,
+#login-frame form {
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -65,11 +75,13 @@ input {
     width: 100%;
 }
 
-#register-frame form > .form-control, #login-frame form > .form-control {
+#register-frame form > .form-control,
+#login-frame form > .form-control {
     padding: 5px;
 }
 
-#register-frame form > .form-control > *, #login-frame form > .form-control > * {
+#register-frame form > .form-control > *,
+#login-frame form > .form-control > * {
     height: 24px;
 }
 
@@ -103,11 +115,40 @@ input {
 
 #rooms {
     display: flex;
+    flex-direction: column;
     width: 100%;
     padding: 10px;
     background-color: darkslategray;
     border-bottom-left-radius: 15px;
     border-bottom-right-radius: 15px;
+}
+
+#chat-frame .tabs {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+}
+
+#chat-frame .tabs .tab {
+    width: calc(100% / 6);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#chat-frame .tabs .tab a {
+    overflow-x: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: center;
+    border-radius: 5px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    background: gray;
+    margin: 5px;
 }
 
 #rooms .room {
@@ -137,9 +178,12 @@ input {
 }
 
 #rooms .room .input input {
-    width: 90%;
+    width: 100%;
     padding: 3px;
     margin-right: 10px;
+    background-color: #263238;
+    color: white;
+    margin-left: 8px;
 }
 
 #rooms .room .messages {
@@ -152,6 +196,22 @@ input {
 
 #rooms .room .messages .message {
     margin: 2px 10px 2px 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+#rooms .room .messages .message * {
+    margin: 2px 6px 2px 0px;
+}
+
+#rooms .room .messages .message .author {
+    font-weight: bold;
+}
+
+#rooms .room .messages .message .meta {
+    display: none;
 }
 
 #rooms .room .users {
@@ -167,20 +227,24 @@ input {
     text-align: right;
 }
 
-button.control-create, button.control-update, button.control-submit {
-    background-color: #66CDAA;
+button.control-create,
+button.control-update,
+button.control-submit {
+    background-color: #66cdaa;
 }
 
-button.control-create:hover, button.control-update:hover, button.control-submit:hover {
-    background-color: #00FF7F;
+button.control-create:hover,
+button.control-update:hover,
+button.control-submit:hover {
+    background-color: #00ff7f;
 }
 
 button.control-delete {
-    background-color: #FF6347;
+    background-color: #ff6347;
 }
 
 button.control-delete:hover {
-    background-color: #FF4500;
+    background-color: #ff4500;
 }
 
 .overlay {
@@ -216,20 +280,22 @@ button.control-delete:hover {
     opacity: 1; /* Make children visible, inheriting the delay and transition */
 }
 
-
 /* Media Queries */
-
 
 /* For mobile phones and tablets: */
 @media only screen and (max-width: 768px) {
-    #register-frame, #login-frame, #chat-frame {
+    #register-frame,
+    #login-frame,
+    #chat-frame {
         width: 100%;
     }
 }
 
 /* For medium screens: */
 @media only screen and (min-width: 769px) and (max-width: 1024px) {
-    #register-frame, #login-frame, #chat-frame {
+    #register-frame,
+    #login-frame,
+    #chat-frame {
         width: 80%;
     }
 }

@@ -137,7 +137,45 @@ func userInfo(context *gin.Context) {
 }
 
 // GET /rooms
-func rooms(context *gin.Context) {
+// func rooms(context *gin.Context) {
+// 	// Get the user's session
+// 	session := sessions.Default(context)
+
+// 	// Get the user
+// 	user := GetUserByID(session.Get("user").(string))
+// 	if user == nil {
+// 		context.Status(http.StatusNotFound)
+// 		return
+// 	}
+
+// 	// Iterate over the user's rooms ids and load the rooms, generate the rooms templates, and send the response
+// 	rooms := []*Room{}
+// 	for _, roomstub := range user.Rooms {
+// 		room, err := LoadRoom(roomstub.ID.String())
+// 		if err != nil {
+// 			// Log the error
+// 			log.Println(err)
+// 			context.Status(http.StatusInternalServerError)
+// 			return
+// 		}
+// 		rooms = append(rooms, &room)
+// 	}
+
+// 	roomsTemplate, err := RoomsTemplate(rooms)
+// 	if err != nil {
+// 		// Log the error
+// 		log.Println(err)
+// 		context.Status(http.StatusInternalServerError)
+// 		return
+// 	}
+
+// 	context.Header("Content-Type", "text/html")
+// 	context.String(http.StatusOK, roomsTemplate)
+// }
+
+// GET /room/:id
+// GET /room
+func room(context *gin.Context) {
 	// Get the user's session
 	session := sessions.Default(context)
 
@@ -148,29 +186,35 @@ func rooms(context *gin.Context) {
 		return
 	}
 
-	// Iterate over the user's rooms ids and load the rooms, generate the rooms templates, and send the response
-	rooms := []*Room{}
-	for _, roomstub := range user.Rooms {
-		room, err := LoadRoom(roomstub.ID.String())
-		if err != nil {
-			// Log the error
-			log.Println(err)
-			context.Status(http.StatusInternalServerError)
-			return
-		}
-		rooms = append(rooms, &room)
+	// If the user has no rooms, 404
+	if len(user.Rooms) == 0 {
+		context.Status(http.StatusNotFound)
+		return
 	}
 
-	roomsTemplate, err := RoomsTemplate(rooms)
+	// Get the room ID from the URL
+	roomID := context.Param("id")
+	if roomID == "" {
+		// Choose the users first room if no room ID is provided
+		roomID = user.Rooms[0].ID.String()
+	}
+
+	// Load the room
+	room, err := LoadRoom(roomID)
 	if err != nil {
-		// Log the error
-		log.Println(err)
+		context.Status(http.StatusNotFound)
+		return
+	}
+
+	// Generate the room template
+	roomTemplate, err := RoomTemplate(&room)
+	if err != nil {
 		context.Status(http.StatusInternalServerError)
 		return
 	}
 
 	context.Header("Content-Type", "text/html")
-	context.String(http.StatusOK, roomsTemplate)
+	context.String(http.StatusOK, roomTemplate)
 }
 
 // POST /message/send
@@ -238,6 +282,29 @@ func sendMessage(context *gin.Context) {
 
 	// Send a 200 OK status
 	context.Status(http.StatusOK)
+}
+
+// GET /tabs
+func tabs(context *gin.Context) {
+	// Get the user's session
+	session := sessions.Default(context)
+
+	// Get the user
+	user := GetUserByID(session.Get("user").(string))
+	if user == nil {
+		context.Status(http.StatusNotFound)
+		return
+	}
+
+	// Generate the room tabs template
+	tabsTemplate, err := TabsTemplate(user.Rooms)
+	if err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
+
+	context.Header("Content-Type", "text/html")
+	context.String(http.StatusOK, tabsTemplate)
 }
 
 // GET /ping

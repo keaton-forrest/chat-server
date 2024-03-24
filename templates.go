@@ -24,12 +24,6 @@ var templates *template.Template
 func init() {
 	// Initialize and parse all templates.
 	templates = template.Must(template.New("master").Parse(`
-{{define "rooms"}}
-	{{range .}}
-		{{template "room" .}}
-	{{end}}
-{{end}}
-
 {{define "room"}}
 <div class='room' id='id-{{.ID}}'>
 	<h2>{{.Name}}</h2>
@@ -50,14 +44,11 @@ func init() {
 
 {{define "message"}}
 <div class='message {{.Status}}'>
+	<div class='timestamp'>{{.ModifiedAt}}</div>
+	<span class='separator'> \ </span>
 	<div class='author'>{{.Author.DisplayName}}</div>
+	<span class='separator'> \ </span>
 	<div class='content'>{{.Content}}</div>
-	<div class='meta'>
-		<span class='created'>{{.CreatedAt}}</span>
-		{{if ne .ModifiedAt ""}}
-			<span class='modified'>Modified: {{.ModifiedAt}}</span>
-		{{end}}
-	</div>
 </div>
 {{end}}
 
@@ -82,13 +73,26 @@ func init() {
 	</form>
 </div>
 {{end}}
+
+{{define "tabs"}}
+<div class='tabs'>
+	{{range .}}
+		{{template "tab" .}}
+	{{end}}
+</div>
+{{end}}
+
+{{define "tab"}}
+<div class='tab'>
+	<a href='#' hx-get='/room/{{.ID}}' hx-swap='innerHTML' hx-target='#rooms'>{{.Name}}</a>
+</div>
+{{end}}
 `))
 }
 
-// RoomsTemplate generates HTML for rooms.
-func RoomsTemplate(rooms []*Room) (string, error) {
+func RoomTemplate(room *Room) (string, error) {
 	var htmlResponse bytes.Buffer
-	if err := templates.ExecuteTemplate(&htmlResponse, "rooms", rooms); err != nil {
+	if err := templates.ExecuteTemplate(&htmlResponse, "room", room); err != nil {
 		return "", err
 	}
 	return htmlResponse.String(), nil
@@ -113,6 +117,14 @@ func UsersTemplate(users []*User) (string, error) {
 func MessageTemplate(message *Message) (string, error) {
 	var htmlResponse bytes.Buffer
 	if err := templates.ExecuteTemplate(&htmlResponse, "message", message); err != nil {
+		return "", err
+	}
+	return htmlResponse.String(), nil
+}
+
+func TabsTemplate(rooms []*RoomStub) (string, error) {
+	var htmlResponse bytes.Buffer
+	if err := templates.ExecuteTemplate(&htmlResponse, "tabs", rooms); err != nil {
 		return "", err
 	}
 	return htmlResponse.String(), nil

@@ -18,8 +18,8 @@
                         <button hx-get="/logout" hx-trigger="click">x</button>
                     </div>
                 </div>
-                <!-- Rooms are HTML Tabs, lazy loaded -->
-                <div id="rooms" class="tabs" hx-get="/rooms" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#loading"></div>
+                <div id="tabs" class="tabs" hx-get="/tabs" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#loading"></div>
+                <div id="rooms" class="tabs" hx-get="/room" hx-trigger="load" hx-swap="innerHTML" hx-indicator="#loading"></div>
             </div>
             <div id="loading" class="htmx-indicator overlay">
                 <div>Loading...</div>

@@ -54,7 +54,9 @@ func RegisterHandlers(router *gin.Engine) {
 	// Index
 	isAuthenticated.GET("/", indexPage)
 	isAuthenticated.GET("/user", userInfo)
-	isAuthenticated.GET("/rooms", rooms)
+	isAuthenticated.GET("/room/:id", room)
+	isAuthenticated.GET("/room", room)
+	isAuthenticated.GET("/tabs", tabs)
 	isAuthenticated.POST("/message/send", sendMessage)
 	isAuthenticated.GET("/room/:id/stream", streamRoom)
 	// Health check
