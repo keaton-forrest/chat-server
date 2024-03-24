@@ -3,14 +3,27 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
 
 /* Types */
 
 type Cache struct {
-	Users Users
-	Rooms Roomstubs
+	Users    Users
+	Rooms    Roomstubs
+	Config   AppConfig
+	Channels []SSEStream
+}
+
+type SSEStream struct {
+	Stream chan string
+	RoomID uuid.UUID
+	UserID uuid.UUID
+}
+
+type AppConfig struct {
+	AdminAccount gin.Accounts
 }
 
 // Message Status types

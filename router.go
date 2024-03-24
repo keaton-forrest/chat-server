@@ -3,13 +3,9 @@
 package main
 
 import (
-	"log"
-	"os"
-
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 )
 
 // InitRouter initializes the HTTP request handlers and starts the HTTP server
@@ -31,7 +27,7 @@ func InitRouter() {
 	router.Static("/static", "./static")
 
 	// Register the HTTP request handlers
-	registerHandlers(router)
+	RegisterHandlers(router)
 
 	// Start the HTTP server on port 8080
 	router.Run(":8080")
@@ -39,46 +35,28 @@ func InitRouter() {
 }
 
 // HTTP Request Handlers
-func registerHandlers(router *gin.Engine) {
+func RegisterHandlers(router *gin.Engine) {
 
-	// Get authorized credentials
-	authorizedCredentials := getAuthorizedCredentials()
+	// Basic auth middleware
+	isAdmin := router.Group("/", gin.BasicAuth(cache.Config.AdminAccount))
 
-	// Apply basic auth middleware
-	authorized := router.Group("/", gin.BasicAuth(authorizedCredentials))
+	// Session auth middleware
+	isAuthenticated := router.Group("/", SessionAuthMiddleware())
 
 	// Register
-	authorized.GET("/register", registerPage)
-	authorized.POST("/register", register)
+	isAdmin.GET("/register", registerPage)
+	isAdmin.POST("/register", register)
 	// Login
 	router.GET("/login", loginPage)
 	router.POST("/login", login)
 	// Logout
 	router.GET("/logout", logout)
 	// Index
-	router.GET("/", indexPage)
-	router.GET("/user", userInfo)
-	router.GET("/rooms", rooms)
-	router.POST("/message/send", sendMessage)
+	isAuthenticated.GET("/", indexPage)
+	isAuthenticated.GET("/user", userInfo)
+	isAuthenticated.GET("/rooms", rooms)
+	isAuthenticated.POST("/message/send", sendMessage)
+	isAuthenticated.GET("/room/:id/stream", streamRoom)
 	// Health check
 	router.GET("/ping", ping)
-}
-
-func getAuthorizedCredentials() gin.Accounts {
-	// Load the .env file in the current directory
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	// Retrieve credentials
-	adminUser := os.Getenv("ADMIN_USER")
-	adminPassword := os.Getenv("ADMIN_PASSWORD")
-
-	// Define authorized credentials using the loaded environment variables
-	authorizedCredentials := gin.Accounts{
-		adminUser: adminPassword,
-	}
-
-	return authorizedCredentials
 }

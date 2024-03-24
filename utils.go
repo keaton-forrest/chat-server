@@ -3,9 +3,13 @@
 package main
 
 import (
+	"log"
+	"os"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/joho/godotenv"
 )
 
 /* Utility Functions */
@@ -32,4 +36,58 @@ func GetRoomStubByID(id string) *RoomStub {
 		}
 	}
 	return nil
+}
+
+func getAdminAccount() gin.Accounts {
+	// Load the .env file in the current directory
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Retrieve credentials
+	adminUser := os.Getenv("ADMIN_USER")
+	adminPassword := os.Getenv("ADMIN_PASSWORD")
+
+	// Define authorized credentials using the loaded environment variables
+	adminAccount := gin.Accounts{
+		adminUser: adminPassword,
+	}
+
+	return adminAccount
+}
+
+func GetChannel(roomID, userID string) *SSEStream {
+	for _, channel := range cache.Channels {
+		if channel.RoomID == uuid.MustParse(roomID) && channel.UserID == uuid.MustParse(userID) {
+			return &channel
+		}
+	}
+	return nil
+}
+
+func AddChannel(roomID, userID string) {
+	cache.Channels = append(cache.Channels, SSEStream{
+		Stream: make(chan string),
+		RoomID: uuid.MustParse(roomID),
+		UserID: uuid.MustParse(userID),
+	})
+}
+
+func RemoveChannel(roomID, userID string) {
+	for i, channel := range cache.Channels {
+		if channel.RoomID == uuid.MustParse(roomID) && channel.UserID == uuid.MustParse(userID) {
+			cache.Channels = append(cache.Channels[:i], cache.Channels[i+1:]...)
+			return
+		}
+	}
+}
+
+func GetOrCreateChannel(roomID, userID string) *SSEStream {
+	channel := GetChannel(roomID, userID)
+	if channel == nil {
+		AddChannel(roomID, userID)
+		channel = GetChannel(roomID, userID)
+	}
+	return channel
 }

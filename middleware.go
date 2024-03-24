@@ -12,11 +12,10 @@ import (
 func SessionAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
-		user := session.Get("authenticated")
+		user := session.Get("user")
 		if user == nil {
 			// User is not logged in, return a 401 Unauthorized response
-			c.JSON(401, gin.H{"error": "unauthorized"})
-			c.Abort()
+			c.AbortWithStatus(401)
 			return
 		}
 		// Proceed to the next handler if the user is authenticated

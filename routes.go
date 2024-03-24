@@ -111,13 +111,6 @@ func register(context *gin.Context) {
 
 // GET /
 func indexPage(context *gin.Context) {
-	// Check if we have a session and if not redirect to the login page
-	session := sessions.Default(context)
-	if session.Get("user") == nil {
-		context.Redirect(http.StatusFound, "/login")
-		return
-	}
-
 	// Send the home page
 	context.HTML(http.StatusOK, "index.html", gin.H{})
 }
@@ -126,12 +119,6 @@ func indexPage(context *gin.Context) {
 func userInfo(context *gin.Context) {
 	// Get the user's session
 	session := sessions.Default(context)
-
-	// Check if we have a session and if not redirect to the login page
-	if session.Get("user") == nil {
-		context.Redirect(http.StatusFound, "/login")
-		return
-	}
 
 	user := GetUserByID(session.Get("user").(string))
 	if user == nil {
@@ -153,12 +140,6 @@ func userInfo(context *gin.Context) {
 func rooms(context *gin.Context) {
 	// Get the user's session
 	session := sessions.Default(context)
-
-	// Check if we have a session and if not return 404
-	if session.Get("user") == nil {
-		context.Status(http.StatusNotFound)
-		return
-	}
 
 	// Get the user
 	user := GetUserByID(session.Get("user").(string))
@@ -196,14 +177,9 @@ func rooms(context *gin.Context) {
 
 // POST /message/send
 func sendMessage(context *gin.Context) {
+
 	// Get the user's session
 	session := sessions.Default(context)
-
-	// Check if we have a session and if not return 404
-	if session.Get("user") == nil {
-		context.Status(http.StatusNotFound)
-		return
-	}
 
 	// Get the user
 	user := GetUserByID(session.Get("user").(string))
@@ -247,6 +223,9 @@ func sendMessage(context *gin.Context) {
 		return
 	}
 
+	// Get the channel
+	messageChan := GetOrCreateChannel(roomID, user.ID.String())
+
 	// Generate the message template
 	messageTemplate, err := MessageTemplate(message)
 	if err != nil {
@@ -254,11 +233,41 @@ func sendMessage(context *gin.Context) {
 		return
 	}
 
-	context.Header("Content-Type", "text/html")
-	context.String(http.StatusOK, messageTemplate)
+	// Send the message to the channel
+	messageChan.Stream <- messageTemplate
+
+	// Send a 200 OK status
+	context.Status(http.StatusOK)
 }
 
 // GET /ping
 func ping(context *gin.Context) {
 	context.String(http.StatusOK, "pong")
+}
+
+// SSE GET /room/:id/stream
+func streamRoom(context *gin.Context) {
+
+	roomID := context.Param("id")
+	session := sessions.Default(context)
+	user := GetUserByID(session.Get("user").(string))
+
+	context.Header("Content-Type", "text/event-stream")
+	context.Header("Cache-Control", "no-cache")
+	context.Header("Connection", "keep-alive")
+
+	messageChan := GetOrCreateChannel(roomID, user.ID.String())
+
+	clientGone := context.Request.Context().Done()
+
+	for {
+		select {
+		case message := <-messageChan.Stream:
+			context.SSEvent("message", message)
+		case <-clientGone:
+			log.Println("Client disconnected")
+			RemoveChannel(roomID, user.ID.String())
+			return
+		}
+	}
 }
