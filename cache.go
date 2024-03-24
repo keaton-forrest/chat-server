@@ -31,7 +31,7 @@ func InitCache() {
 }
 
 func LoadConfig() (AppConfig, error) {
-	adminAcc := getAdminAccount()
+	adminAcc := GetAdminAccount()
 	var config = AppConfig{
 		AdminAccount: adminAcc,
 	}

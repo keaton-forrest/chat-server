@@ -35,7 +35,7 @@ func login(context *gin.Context) {
 		// If we match an email
 		if user.Email == email {
 			// Check the password hash
-			if compareToHash(password, user.Hash) {
+			if CompareToHash(password, user.Hash) {
 				// If the password matches, set the user's ID in the session data
 				session.Set("user", user.ID.String())
 				session.Save()
@@ -94,7 +94,7 @@ func register(context *gin.Context) {
 	}
 
 	// Hash the password
-	hash, err := hashString(password)
+	hash, err := HashString(password)
 	if err != nil {
 		log.Println("Error hashing password")
 		context.Status(http.StatusInternalServerError)
@@ -173,8 +173,6 @@ func rooms(context *gin.Context) {
 	context.String(http.StatusOK, roomsTemplate)
 }
 
-// GET /room/:id
-
 // POST /message/send
 func sendMessage(context *gin.Context) {
 
@@ -223,8 +221,8 @@ func sendMessage(context *gin.Context) {
 		return
 	}
 
-	// Get the channel
-	messageChan := GetOrCreateChannel(roomID, user.ID.String())
+	// Get the channels for the room
+	channels := GetChannels(room.ID.String())
 
 	// Generate the message template
 	messageTemplate, err := MessageTemplate(message)
@@ -233,8 +231,10 @@ func sendMessage(context *gin.Context) {
 		return
 	}
 
-	// Send the message to the channel
-	messageChan.Stream <- messageTemplate
+	// For each channel, send the message
+	for _, channel := range channels {
+		channel.Stream <- messageTemplate
+	}
 
 	// Send a 200 OK status
 	context.Status(http.StatusOK)
@@ -264,6 +264,9 @@ func streamRoom(context *gin.Context) {
 		select {
 		case message := <-messageChan.Stream:
 			context.SSEvent("message", message)
+			if flusher, ok := context.Writer.(http.Flusher); ok {
+				flusher.Flush()
+			}
 		case <-clientGone:
 			log.Println("Client disconnected")
 			RemoveChannel(roomID, user.ID.String())

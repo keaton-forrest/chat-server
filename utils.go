@@ -38,7 +38,7 @@ func GetRoomStubByID(id string) *RoomStub {
 	return nil
 }
 
-func getAdminAccount() gin.Accounts {
+func GetAdminAccount() gin.Accounts {
 	// Load the .env file in the current directory
 	err := godotenv.Load()
 	if err != nil {
@@ -90,4 +90,14 @@ func GetOrCreateChannel(roomID, userID string) *SSEStream {
 		channel = GetChannel(roomID, userID)
 	}
 	return channel
+}
+
+func GetChannels(roomID string) []*SSEStream {
+	var channels []*SSEStream
+	for _, channel := range cache.Channels {
+		if channel.RoomID == uuid.MustParse(roomID) {
+			channels = append(channels, &channel)
+		}
+	}
+	return channels
 }
