@@ -31,10 +31,10 @@ func init() {
 {{end}}
 
 {{define "room"}}
-<div class='room'>
+<div class='room' id='id-{{.ID}}'>
 	<h2>{{.Name}}</h2>
 	<div>
-		<div class='messages'>
+		<div class='messages' hx-ext="sse" sse-connect='/room/{{.ID}}' sse-swap='message' hx-swap='beforeend'>
 			{{range .Messages}}
 				{{template "message" .}}
 			{{end}}
@@ -44,7 +44,7 @@ func init() {
 			{{template "users" .Users}}
 		</div>
 	</div>
-	{{template "input"}}
+	{{template "input" .}}
 </div>
 {{end}}
 
@@ -75,7 +75,7 @@ func init() {
 
 {{define "input"}}
 <div class='input'>
-	<form hx-post='/message/send' hx-indicator="#loading">
+	<form hx-post='/message/send' hx-indicator="#loading" hx-swap='none'>
 		<input type='text' name='content' required>
 		<input type='hidden' name='room' value='{{.ID}}'>
 		<button type='submit'>Send</button>

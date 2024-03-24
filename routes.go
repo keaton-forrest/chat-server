@@ -40,7 +40,7 @@ func login(context *gin.Context) {
 				session.Set("user", user.ID.String())
 				session.Save()
 
-				// For HTMX, a 200 OK status with a script to redirect is more appropriate than a 302 Found
+				// For HTMX, when using AJAX, a 200 OK status with a script to redirect is more appropriate than a 302 Found
 				context.Header("Content-Type", "text/html")
 				context.String(http.StatusOK, "<script>window.location.href = '/';</script>")
 				return
@@ -101,16 +101,8 @@ func register(context *gin.Context) {
 		return
 	}
 
-	// Add the new user to the users list
-	newUser := NewUser(displayName, email, hash)
-	cache.Users.Users = append(cache.Users.Users, *newUser)
-
-	// Save the updated users back to the data store
-	if err := SaveUsers(cache.Users); err != nil {
-		log.Println("Error saving users")
-		context.Status(http.StatusInternalServerError)
-		return
-	}
+	// Create a new user
+	NewUser(displayName, email, hash)
 
 	// Redirect the client to the login page
 	context.Header("Content-Type", "text/html")
@@ -199,6 +191,8 @@ func rooms(context *gin.Context) {
 	context.Header("Content-Type", "text/html")
 	context.String(http.StatusOK, roomsTemplate)
 }
+
+// GET /room/:id
 
 // POST /message/send
 func sendMessage(context *gin.Context) {

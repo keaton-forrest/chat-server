@@ -22,7 +22,7 @@ const (
 
 type Message struct {
 	ID         uuid.UUID `json:"id"`
-	Author     *User     `json:"author"`
+	Author     *UserStub `json:"author"`
 	Content    string    `json:"content"`
 	CreatedAt  string    `json:"created_at"`
 	ModifiedAt string    `json:"modified_at"`
@@ -75,7 +75,7 @@ type Roomstubs struct {
 func NewMessage(author *User, content string) *Message {
 	return &Message{
 		ID:         uuid.New(),
-		Author:     author,
+		Author:     &UserStub{ID: author.ID, DisplayName: author.DisplayName},
 		Content:    content,
 		CreatedAt:  CurrentTime(),
 		ModifiedAt: CurrentTime(),
