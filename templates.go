@@ -10,81 +10,96 @@ import (
 /* Templates */
 
 // HTML templates for the chat application
-// 	- Room
-// 		- Message history
-// 			- Message
-// 		- Users
-// 			- User
-//  	- Input
+//  - Rooms
+// 		- Room
+// 			- Message history
+// 				- Message
+// 			- Users
+// 				- User
+//  		- Input
 
-// Room template
-func RoomTemplate(room Room) (string, error) {
-	tmpl := template.Must(template.New("room").Parse(`
-		<div class='room'>
-			<div class='messages'>
-				{{range .Messages}}
-					{{MessageTemplate .}}
-				{{end}}
-			</div>
-			<div class='users'>
-				{{range .Users}}
-					{{UserTemplate .}}
-				{{end}}
-			</div>
+// Define a global variable for templates. This is compiled once at startup.
+var templates *template.Template
+
+func init() {
+	// Initialize and parse all templates.
+	templates = template.Must(template.New("master").Parse(`
+{{define "rooms"}}
+	{{range .}}
+		{{template "room" .}}
+	{{end}}
+{{end}}
+
+{{define "room"}}
+<div class='room'>
+	<h2>{{.Name}}</h2>
+	<div>
+		<div class='messages'>
+			{{range .Messages}}
+				{{template "message" .}}
+			{{end}}
 		</div>
-	`))
+		<div class='users'>
+			{{range .Users}}
+				{{template "user" .}}
+			{{end}}
+		</div>
+	</div>
+	{{template "input"}}
+</div>
+{{end}}
 
+{{define "message"}}
+<div class='message {{.Status}}'>
+	<div class='author'>{{.Author.DisplayName}}</div>
+	<div class='content'>{{.Content}}</div>
+	<div class='meta'>
+		<span class='created'>{{.CreatedAt}}</span>
+		{{if ne .ModifiedAt ""}}
+			<span class='modified'>Modified: {{.ModifiedAt}}</span>
+		{{end}}
+	</div>
+</div>
+{{end}}
+
+{{define "user"}}
+<div class='user'>
+	<div class='displayname'>{{.DisplayName}}</div>
+</div>
+{{end}}
+
+{{define "input"}}
+<div class='input'>
+	<form hx-post='/message/send' hx-indicator="#loading">
+		<input type='text' name='content' required>
+		<input type='hidden' name='room' value='{{.ID}}'>
+		<button type='submit'>Send</button>
+	</form>
+</div>
+{{end}}
+`))
+}
+
+// RoomsTemplate generates HTML for rooms.
+func RoomsTemplate(rooms []*Room) (string, error) {
 	var htmlResponse bytes.Buffer
-	if err := tmpl.Execute(&htmlResponse, room); err != nil {
+	if err := templates.ExecuteTemplate(&htmlResponse, "rooms", rooms); err != nil {
 		return "", err
 	}
 	return htmlResponse.String(), nil
 }
 
-// Message template
-func MessageTemplate(message Message) (string, error) {
-	tmpl := template.Must(template.New("message").Parse(`
-		<div class='message'>
-			<div class='author'>{{.Author.DisplayName}}</div>
-			<div class='content'>{{.Content}}</div>
-		</div>
-	`))
-
+func UserTemplate(user *User) (string, error) {
 	var htmlResponse bytes.Buffer
-	if err := tmpl.Execute(&htmlResponse, message); err != nil {
+	if err := templates.ExecuteTemplate(&htmlResponse, "user", user); err != nil {
 		return "", err
 	}
 	return htmlResponse.String(), nil
 }
 
-// User template
-func UserTemplate(user User) (string, error) {
-	tmpl := template.Must(template.New("user").Parse(`
-		<div class='user'>
-			<div class='displayname'>{{.DisplayName}}</div>
-		</div>
-	`))
-
+func MessageTemplate(message *Message) (string, error) {
 	var htmlResponse bytes.Buffer
-	if err := tmpl.Execute(&htmlResponse, user); err != nil {
-		return "", err
-	}
-	return htmlResponse.String(), nil
-}
-
-// Input template
-func InputTemplate() (string, error) {
-	tmpl := template.Must(template.New("input").Parse(`
-		<div class='input'>
-			<form hx-post='/message/send' hx-swap='outerHTML' hx-indicator="#loading">
-				<input type='text' name='content' required>
-				<button type='submit'>Send</button>
-			</form>
-		</div>
-	`))
-
-	var htmlResponse bytes.Buffer
-	if err := tmpl.Execute(&htmlResponse, nil); err != nil {
+	if err := templates.ExecuteTemplate(&htmlResponse, "message", message); err != nil {
 		return "", err
 	}
 	return htmlResponse.String(), nil

@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 /* HTTP Request Handlers */
@@ -44,18 +43,9 @@ func login(context *gin.Context) {
 		if user.Email == email {
 			// Check the password hash
 			if compareToHash(password, user.Hash) {
-				// Hash the users email and set it as a unique identifier for the session
-				emailHash, err := hashString(email)
-				if err != nil {
-					log.Println("Error hashing email")
-					context.Status(http.StatusInternalServerError)
-					return
-				}
-				session.Set("sid", emailHash)
+				// If the password matches, set the user's ID in the session data
+				session.Set("user", user.ID.String())
 				session.Save()
-
-				// Set the users SID in the user struct
-				user.SID = emailHash
 
 				// For HTMX, a 200 OK status with a script to redirect is more appropriate than a 302 Found
 				context.Header("Content-Type", "text/html")
@@ -127,16 +117,8 @@ func register(context *gin.Context) {
 	}
 
 	// Add the new user to the users list
-	newUser := User{
-		ID:          uuid.New(),
-		SID:         "",
-		DisplayName: displayName,
-		Email:       email,
-		Hash:        hash,
-		// Add the default room ID for General Chat
-		Rooms: []uuid.UUID{uuid.MustParse("260ca734-06ff-4baa-baaf-8e440730e960")},
-	}
-	users.Users = append(users.Users, newUser)
+	newUser := NewUser(displayName, email, hash)
+	users.Users = append(users.Users, *newUser)
 
 	// Save the updated users back to the data store
 	if err := SaveUsers(users); err != nil {
@@ -154,7 +136,7 @@ func register(context *gin.Context) {
 func indexPage(context *gin.Context) {
 	// Check if we have a session and if not redirect to the login page
 	session := sessions.Default(context)
-	if session.Get("sid") == nil {
+	if session.Get("user") == nil {
 		context.Redirect(http.StatusFound, "/login")
 		return
 	}
@@ -169,8 +151,41 @@ func userInfo(context *gin.Context) {
 	session := sessions.Default(context)
 
 	// Check if we have a session and if not redirect to the login page
-	if session.Get("sid") == nil {
+	if session.Get("user") == nil {
 		context.Redirect(http.StatusFound, "/login")
+		return
+	}
+
+	users, err := LoadUsers()
+	if err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
+
+	user := getUserByID(users.Users, session.Get("user").(string))
+	if user == nil {
+		context.Status(http.StatusNotFound)
+		return
+	}
+
+	userTemplate, err := UserTemplate(user)
+	if err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
+
+	context.Header("Content-Type", "text/html")
+	context.String(http.StatusOK, userTemplate)
+}
+
+// GET /rooms
+func rooms(context *gin.Context) {
+	// Get the user's session
+	session := sessions.Default(context)
+
+	// Check if we have a session and if not return 404
+	if session.Get("user") == nil {
+		context.Status(http.StatusNotFound)
 		return
 	}
 
@@ -181,352 +196,102 @@ func userInfo(context *gin.Context) {
 		return
 	}
 
-	// Find the user in the users list
-	for _, user := range users.Users {
-		// If we match a SID
-		if user.SID == session.Get("sid") {
-			// Generate a HTML response for the user
-			HTTPTemplate, err := UserTemplate(user)
-			if err != nil {
-				context.Status(http.StatusInternalServerError)
-				return
-			}
-			context.JSON(http.StatusOK, HTTPTemplate)
-			return
-		}
-	}
-
-	// If the user was not found, return a 404
-	context.Status(http.StatusNotFound)
-}
-
-// GET /room/:id
-func roomPage(context *gin.Context) {
-	// Get the user's session
-	session := sessions.Default(context)
-
-	// Check if we have a session and if not redirect to the login page
-	if session.Get("sid") == nil {
-		context.Redirect(http.StatusFound, "/login")
-		return
-	}
-
-	// Read the room ID from the URL
-	roomID := context.Param("id")
-	if roomID == "" {
-		context.Status(http.StatusBadRequest)
-		return
-	}
-
-	// Load room
-	room, err := LoadRoom(roomID)
-	if err != nil {
+	// Get the user
+	user := getUserByID(users.Users, session.Get("user").(string))
+	if user == nil {
 		context.Status(http.StatusNotFound)
 		return
 	}
 
-	// Generate the room page
-	htmlResponse, err := RoomTemplate(room)
+	// Iterate over the user's rooms ids and load the rooms, generate the rooms templates, and send the response
+	rooms := []*Room{}
+	for _, roomID := range user.Rooms {
+		room, err := LoadRoom(roomID.String())
+		if err != nil {
+			context.Status(http.StatusInternalServerError)
+			return
+		}
+		rooms = append(rooms, &room)
+	}
+
+	roomsTemplate, err := RoomsTemplate(rooms)
 	if err != nil {
 		context.Status(http.StatusInternalServerError)
 		return
 	}
 
-	// Send the response
 	context.Header("Content-Type", "text/html")
-	context.String(http.StatusOK, htmlResponse)
-
+	context.String(http.StatusOK, roomsTemplate)
 }
 
-// POST /items/create
-// func createItem(context *gin.Context) {
-// 	// Get the user's session
-// 	session := sessions.Default(context)
+// POST /message/send
+func sendMessage(context *gin.Context) {
+	// Get the user's session
+	session := sessions.Default(context)
 
-// 	// Check if the user's list UUID is in the session
-// 	listUUID, err := uuid.Parse(session.Get("list").(string))
-// 	if err != nil {
-// 		// If the user's list UUID is not set in the cookie, 400 Bad Request
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
+	// Check if we have a session and if not return 404
+	if session.Get("user") == nil {
+		context.Status(http.StatusNotFound)
+		return
+	}
 
-// 	// Read incoming item name
-// 	itemName := context.PostForm("item")
-// 	if itemName == "" {
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
+	// Load existing users
+	users, err := LoadUsers()
+	if err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
 
-// 	// Read incoming item due date
-// 	itemDue := context.PostForm("date")
-// 	var formattedDueDate string // Variable to hold the formatted due date
-// 	if itemDue == "" {
-// 		// If no date is provided, default to 3 days from now, formatted as YYYY-MM-DD
-// 		formattedDueDate = time.Now().Add(72 * time.Hour).Format("2006-01-02")
-// 	} else {
-// 		// Parse the provided date assuming it's in YYYY-MM-DD format
-// 		dueDate, err := time.Parse("2006-01-02", itemDue)
-// 		if err != nil {
-// 			context.Status(http.StatusBadRequest)
-// 			return
-// 		}
-// 		// Format the date to YYYY-MM-DD format to ensure consistency
-// 		formattedDueDate = dueDate.Format("2006-01-02")
-// 	}
+	// Get the user
+	user := getUserByID(users.Users, session.Get("user").(string))
+	if user == nil {
+		context.Status(http.StatusNotFound)
+		return
+	}
 
-// 	// Load existing items
-// 	items, err := LoadItems(listUUID.String())
-// 	if err != nil {
-// 		log.Println("Error loading items")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
+	// Get the room ID from the form
+	roomID := context.PostForm("room")
+	if roomID == "" {
+		context.Status(http.StatusBadRequest)
+		return
+	}
 
-// 	// Add the new item to the items list
-// 	newID := uuid.New()
-// 	newItem := Item{
-// 		ID:     newID,
-// 		Name:   itemName,
-// 		Due:    formattedDueDate,
-// 		Status: "visible",
-// 	}
-// 	items.Items = append(items.Items, newItem)
+	// Load the room
+	room, err := LoadRoom(roomID)
+	if err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
 
-// 	// Sort the items by due date
-// 	sort.Sort(items)
+	// Get the message content from the form
+	content := context.PostForm("content")
+	if content == "" {
+		context.Status(http.StatusBadRequest)
+		return
+	}
 
-// 	// Save the updated items back to the JSON file
-// 	if err := SaveItems(listUUID.String(), items); err != nil {
-// 		log.Println("Error saving items")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
+	// Create a new message
+	message := NewMessage(user, content)
 
-// 	// Generate and send the HTML response
-// 	htmlResponse, err := generateTodoListItems(items)
-// 	if err != nil {
-// 		log.Println("Error generating HTML response")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-// 	context.Header("Content-Type", "text/html")
-// 	context.String(http.StatusOK, htmlResponse)
-// }
+	// Add the message to the room
+	room.Messages = append(room.Messages, *message)
 
-// DELETE /items/delete/:id
-// func deleteItem(context *gin.Context) {
-// 	// Get the user's session
-// 	session := sessions.Default(context)
+	// Save the room back to the data store
+	if err := SaveRoom(room); err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
 
-// 	// Check if the user's list UUID is in the session
-// 	listUUID, err := uuid.Parse(session.Get("list").(string))
-// 	if err != nil {
-// 		// If the user's list UUID is not set in the cookie, 400 Bad Request
-// 		log.Println("No list UUID in session")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
+	// Generate the message template
+	messageTemplate, err := MessageTemplate(message)
+	if err != nil {
+		context.Status(http.StatusInternalServerError)
+		return
+	}
 
-// 	// Read incoming item ID from the URL
-// 	itemID := context.Param("id")
-// 	if itemID == "" {
-// 		log.Println("No item ID provided")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Load existing items
-// 	items, err := LoadItems(listUUID.String())
-// 	if err != nil {
-// 		log.Println("Error loading items")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// Find and remove the item from the items list
-// 	var found bool
-// 	for i, item := range items.Items {
-// 		if item.ID.String() == itemID {
-// 			found = true
-// 			// Remove the item from the list
-// 			items.Items = append(items.Items[:i], items.Items[i+1:]...)
-// 			break
-// 		}
-// 	}
-
-// 	// If the item was not found, return a 404
-// 	if !found {
-// 		context.Status(http.StatusNotFound)
-// 		return
-// 	} else {
-// 		// Save the updated items back to the JSON file
-// 		if err := SaveItems(listUUID.String(), items); err != nil {
-// 			log.Println("Error saving items")
-// 			context.Status(http.StatusInternalServerError)
-// 			return
-// 		}
-// 	}
-
-// 	htmlResponse, err := generateTodoListItems(items)
-// 	if err != nil {
-// 		log.Println("Error generating HTML response")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-// 	context.Header("Content-Type", "text/html")
-// 	context.String(http.StatusOK, htmlResponse)
-// }
-
-// GET /items/edit/:id
-// func editItem(context *gin.Context) {
-// 	// Get the user's session
-// 	session := sessions.Default(context)
-
-// 	// Check if the user's list UUID is in the session
-// 	listUUID, err := uuid.Parse(session.Get("list").(string))
-// 	if err != nil {
-// 		// If the user's list UUID is not set in the cookie, 400 Bad Request
-// 		log.Println("No list UUID in session")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Read incoming item ID from the URL
-// 	itemID := context.Param("id")
-// 	if itemID == "" {
-// 		log.Println("No item ID provided")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Load existing items
-// 	items, err := LoadItems(listUUID.String())
-// 	if err != nil {
-// 		log.Println("Error loading items")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// Find the item in the items list
-// 	var found bool
-// 	var itemToEdit Item
-// 	for _, item := range items.Items {
-// 		if item.ID.String() == itemID {
-// 			found = true
-// 			// Mark the item as "editing"
-// 			item.Status = "editing"
-// 			// Get a reference to the item
-// 			itemToEdit = item
-// 			break
-// 		}
-// 	}
-
-// 	// If the item was not found, return a 404
-// 	if !found {
-// 		log.Println("Item not found")
-// 		context.Status(http.StatusNotFound)
-// 		return
-// 	}
-
-// 	// Send the item back to the client as a set of inputs
-// 	htmlResponse, err := generateTodoItemForm(itemToEdit)
-// 	if err != nil {
-// 		log.Println("Error generating HTML response")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	context.Header("Content-Type", "text/html")
-// 	context.String(http.StatusOK, htmlResponse)
-// }
-
-// POST /items/update/:id
-// func updateItem(context *gin.Context) {
-// 	// Get the user's session
-// 	session := sessions.Default(context)
-
-// 	// Check if the user's list UUID is in the session
-// 	listUUID, err := uuid.Parse(session.Get("list").(string))
-// 	if err != nil {
-// 		// If the user's list UUID is not set in the cookie, 400 Bad Request
-// 		log.Println("No list UUID in session")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Read incoming item ID from the URL
-// 	itemID := context.Param("id")
-// 	if itemID == "" {
-// 		log.Println("No item ID provided")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Read incoming item name
-// 	itemName := context.PostForm("item")
-// 	if itemName == "" {
-// 		log.Println("No item name provided")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Read incoming item due date
-// 	itemDue := context.PostForm("date")
-// 	if itemDue == "" {
-// 		log.Println("No item due date provided")
-// 		context.Status(http.StatusBadRequest)
-// 		return
-// 	}
-
-// 	// Load existing items
-// 	items, err := LoadItems(listUUID.String())
-// 	if err != nil {
-// 		log.Println("Error loading items")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	// Find the item in the items list
-// 	var found bool
-// 	var itemToUpdate Item
-// 	for i, item := range items.Items {
-// 		if item.ID.String() == itemID {
-// 			found = true
-// 			// Update the item's name and due date
-// 			items.Items[i].Name = itemName
-// 			items.Items[i].Due = itemDue
-// 			// Mark the item as "visible"
-// 			items.Items[i].Status = "visible"
-// 			// Get a reference to the updated item
-// 			itemToUpdate = items.Items[i]
-// 			break
-// 		}
-// 	}
-
-// 	// If the item was not found, return a 404
-// 	if !found {
-// 		log.Println("Item not found")
-// 		context.Status(http.StatusNotFound)
-// 		return
-// 	}
-
-// 	// Save the updated items back to the JSON file
-// 	if err := SaveItems(listUUID.String(), items); err != nil {
-// 		log.Println("Error saving items")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-
-// 	htmlResponse, err := generateTodoItem(itemToUpdate)
-// 	if err != nil {
-// 		log.Println("Error generating HTML response")
-// 		context.Status(http.StatusInternalServerError)
-// 		return
-// 	}
-// 	context.Header("Content-Type", "text/html")
-// 	context.String(http.StatusOK, htmlResponse)
-// }
+	context.Header("Content-Type", "text/html")
+	context.String(http.StatusOK, messageTemplate)
+}
 
 // GET /ping
 func ping(context *gin.Context) {

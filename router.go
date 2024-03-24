@@ -55,9 +55,11 @@ func registerHandlers(router *gin.Engine) {
 	router.POST("/login", login)
 	// Logout
 	router.GET("/logout", logout)
-	// Home
+	// Index
 	router.GET("/", indexPage)
 	router.GET("/user", userInfo)
+	router.GET("/rooms", rooms)
+	router.POST("/message/send", sendMessage)
 	// Health check
 	router.GET("/ping", ping)
 }
